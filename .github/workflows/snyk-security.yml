@@ -2,33 +2,29 @@ name: Snyk Security Scan
 
 on:
   push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
+    branches: [main]
 
 jobs:
-  snyk-scan:
+  security:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
-      - name: Install Snyk CLI
-        uses: snyk/actions/setup@master
+      - name: Install Snyk
+        run: npm install -g snyk
 
-      # 1. This step scans the repo. 
-      # It will fail (block PR) only for High/Critical issues.
-      # Low/Medium will be reported but won't stop the build.
-      - name: Snyk test
+      - name: Authenticate Snyk
+        run: snyk auth ${{ secrets.SNYK_TOKEN }}
+
+      - name: Dependency Scan
         run: snyk test --all-projects --severity-threshold=high
-        env:
-         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
+      - name: Code Scan
+        run: snyk code test --all-projects --severity-threshold=high
 
+      - name: IaC Scan
+        run: snyk iac test --all-projects --severity-threshold=high
 
-      # 2. This step pushes the snapshot to your Snyk Dashboard
-      # This ensures you don't have to import the project manually.
-      - name: Snyk monitor
+      - name: Monitor Project
         run: snyk monitor --all-projects
-        env:
-         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
