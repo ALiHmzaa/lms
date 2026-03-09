@@ -1,4 +1,4 @@
-name: Snyk Security Scan
+name: Snyk Security Scan & Auto-Remediate
 
 on:
   push:
@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Necessary for git to push changes back
 
       - name: Install Snyk
         run: npm install -g snyk
@@ -16,19 +18,30 @@ jobs:
       - name: Authenticate Snyk
         run: snyk auth ${{ secrets.SNYK_TOKEN }}
 
-      # Use 'continue-on-error' so the workflow doesn't stop if it finds bugs
-      - name: Dependency Scan
-        run: snyk test --all-projects --severity-threshold=high --org=alimottu0077
+      # 1. Dependency Scan & Fix (Only for package.json/lock files)
+      - name: Snyk Fix & Test
+        run: snyk fix --all-projects --org=alimottu0077
         continue-on-error: true
 
+      # 2. Push fixes back to your repo (Ali, this is the DevOps magic)
+      - name: Push Remediation
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: automated snyk dependency fix" && git push)
+        continue-on-error: true
+
+      # 3. Static Code Analysis (SAST)
       - name: Code Scan
-        run: snyk code test --all-projects --severity-threshold=high --org=alimottu0077
+        run: snyk code test --all-projects --org=alimottu0077
         continue-on-error: true
 
+      # 4. Infrastructure as Code (Corrected syntax)
       - name: IaC Scan
-        run: snyk iac test --all-projects --severity-threshold=high --org=alimottu0077
+        run: snyk iac test . --org=alimottu0077
         continue-on-error: true
 
-      # This step finally imports the project to your dashboard
-      - name: Monitor Project (Import to Dashboard)
+      # 5. Import updated results to Dashboard
+      - name: Monitor Project
         run: snyk monitor --all-projects --org=alimottu0077
