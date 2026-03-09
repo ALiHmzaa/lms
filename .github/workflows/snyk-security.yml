@@ -37,9 +37,11 @@ jobs:
 
       # 3. Static Code Analysis (SAST)
       - name: Code Scan 
-        run: snyk code test --all-projects --org=alimottu0077 -severity-threshold=high
+        run: snyk code test --all-projects --org=alimottu0077 -severity-threshold=low
 
 
       # 5. Import updated results to Dashboard
       - name: Monitor Project
         run: snyk monitor --all-projects --org=alimottu0077
+
+
