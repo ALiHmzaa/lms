@@ -6,7 +6,7 @@ app.get('/calculate', (req, res) => {
     const userMathExpression = req.query.expr;
     
     // Using eval() on unvalidated user input is highly dangerous
-    const result = eval(userMathExpression); 
+    const result = Math.evaluate(userMathExpression); 
     
     res.send("The result is: " + result);
 });
