@@ -27,4 +27,4 @@ jobs:
         run: snyk iac test --all-projects --severity-threshold=high
 
       - name: Monitor Project
-        run: snyk monitor --all-projects
+        run: snyk monitor --all-projects  
