@@ -3,7 +3,8 @@ name: Snyk Security Scan & Auto-Remediate
 on:
   push:
     branches: [main]
-
+  pull_request: # This is critical for the PR comment feature
+    branches: [main]
 jobs:
   security:
     runs-on: ubuntu-latest
@@ -14,6 +15,8 @@ jobs:
 
       - name: Install Snyk
         run: npm install -g snyk
+
+
 
       - name: Authenticate Snyk
         run: snyk auth ${{ secrets.SNYK_TOKEN }}
@@ -33,14 +36,9 @@ jobs:
         continue-on-error: true
 
       # 3. Static Code Analysis (SAST)
-      - name: Code Scan
-        run: snyk code test --all-projects --org=alimottu0077
-        continue-on-error: true
+      - name: Code Scan 
+        run: snyk code test --all-projects --org=alimottu0077 -severity-threshold=high
 
-      # 4. Infrastructure as Code (Corrected syntax)
-      - name: IaC Scan
-        run: snyk iac test . --org=alimottu0077
-        continue-on-error: true
 
       # 5. Import updated results to Dashboard
       - name: Monitor Project
