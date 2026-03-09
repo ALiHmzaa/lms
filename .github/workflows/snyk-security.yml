@@ -3,7 +3,8 @@ name: Snyk Security Scan & Auto-Remediate
 on:
   push:
     branches: [main]
-
+  pull_request: # This is critical for the PR comment feature
+    branches: [main]
 jobs:
   security:
     runs-on: ubuntu-latest
@@ -15,6 +16,8 @@ jobs:
       - name: Install Snyk
         run: npm install -g snyk
 
+
+        
       - name: Authenticate Snyk
         run: snyk auth ${{ secrets.SNYK_TOKEN }}
 
