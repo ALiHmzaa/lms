@@ -16,6 +16,7 @@ jobs:
       - name: Install Snyk
         run: npm install -g snyk
 
+        
 
 
       - name: Authenticate Snyk
