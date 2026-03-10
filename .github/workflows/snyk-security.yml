@@ -1,50 +1,37 @@
-name: Snyk Security Scan & Auto-Remediate
+name: Snyk PR Checks (with SARIF Upload)
 
 on:
-  push:
+  pull_request:
     branches: [main]
-  pull_request: # This is critical for the PR comment feature
-    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
-  security:
+  snyk-pr:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Necessary for git to push changes back
 
       - name: Install Snyk
         run: npm install -g snyk
 
-        
+      # --- SCA Gate (Dependency vulnerabilities) ---
+      - name: Snyk Open Source (SCA)
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk test --all-projects --severity-threshold=high --org=${{ secrets.SNYK_ORG }}
 
-
-      - name: Authenticate Snyk
-        run: snyk auth ${{ secrets.SNYK_TOKEN }}
-
-      # 1. Dependency Scan & Fix (Only for package.json/lock files)
-      - name: Snyk Fix & Test
-        run: snyk fix --all-projects --org=alimottu0077
-        continue-on-error: true
-
-      # 2. Push fixes back to your repo (Ali, this is the DevOps magic)
-      - name: Push Remediation
+      # --- SAST -> SARIF (Code vulnerabilities) ---
+      # We don't fail the job here because we want to always upload SARIF to GitHub Code Scanning.
+      - name: Snyk Code (SAST) - Generate SARIF
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: automated snyk dependency fix" && git push)
-        continue-on-error: true
+          snyk code test --sarif --org=${{ secrets.SNYK_ORG }} > snyk-code.sarif || true
 
-      # 3. Static Code Analysis (SAST)
-      - name: Code Scan 
-        run: snyk code test --all-projects --org=alimottu0077 --severity-threshold=low
-
-
-      # 5. Import updated results to Dashboard
-      - name: Monitor Project
-        run: snyk monitor --all-projects --org=alimottu0077
-
-
-
-
+      - name: Upload SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk-code.sarif
